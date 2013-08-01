@@ -42,11 +42,11 @@ If you haven't specified the database connection parameters before you should se
 
 You must create the database and the user to access the database prior to first usage. If you don't know the database structure you can call the DB-Help from the "Help" menu. This will print you the desired SQL commands to create the database:
 
-`mysql>CREATE DATABASE sortimages;`
+<pre>mysql>CREATE DATABASE sortimages;
 
-`mysql>GRANT ALL PRIVILEGES ON sortimages.* TO 'username'@'localhost' IDENTIFIED BY 'password';`
+mysql>GRANT ALL PRIVILEGES ON sortimages.* TO 'username'@'localhost' IDENTIFIED BY 'password';
 
-`mysql>`
+mysql>
 
 DROP TABLE IF EXISTS `md5sums`;
 CREATE TABLE `md5sums` (
@@ -64,7 +64,7 @@ CREATE TABLE `md5sums` (
 `exposure_time` varchar(50) default NULL,
 PRIMARY KEY (`md5`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
-
+</pre>
 After creating the database and entering the properties close the properties window. The data will be safed into the properties file.
 
 Now you select the target folder. In this folder the images get copied during sorting. The top most directory will contain ein directory for each year you have sorted photographs. Every year will contain a dir for month' and every month - guess what - right, will contain directories for days.
