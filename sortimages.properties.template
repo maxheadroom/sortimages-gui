@@ -1,0 +1,8 @@
+DBHOST=@dbhost@
+DBPORT=@dbport@
+DBUSER=@dbuser@
+DBPASSWD=@dbpass@
+DBNAME=@dbname@
+DBTABLE=@dbtable@
+DEBUG=DEBUG
+PHOTODIR=@targetdir@

@@ -1,0 +1,9 @@
+#!/bin/sh
+# $Id: start.sh.template,v 1.1 2003/12/14 09:08:02 zero_data Exp $
+
+export JAVA_HOME=/usr/java/j2sdk1.4.2_02
+export JDK_HOME=/usr/java/j2sdk1.4.2_02
+export CLASSPATH=$JAVA_HOME/lib/tools.jar:$JAVA_HOME/lib:/home/m0554/src
+export PATH=$JAVA_HOME/bin:$PATH
+
+java -DCONFIGFILE=@installdir@/sortimages.properties -jar @jarfile@ $1

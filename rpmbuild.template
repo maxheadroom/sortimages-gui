@@ -1,0 +1,40 @@
+Name: SortImagesGUI
+Summary: Sorts JPEG images according to capture date
+Version: @version@
+Release: 0
+License: GPL
+Group: Applications/Archiving
+Source: %{name}-%{version}.src.tgz
+# BuildRoot: /usr/src/packages/BUILD
+Packager: Falko Zurell
+Distribution: SuSE 9.0
+Prefix: /usr/local
+Url: http://sortimages.sourceforge.net
+
+
+
+
+%description
+Java Swing application which sorts JPEG images according to capture date
+
+%prep
+%setup -q
+%build
+ant jar
+
+%install
+ant install
+
+# find %{prefix}/%{name} -type f -fprint $RPM_BUILD_DIR/file.list.%{name}
+
+%clean
+rm -rf $RPM_BUILD_ROOT
+rm -rf $RPM_BUILD_DIR/file.list.%{name}
+rm -rf $RPM_BUILD_DIR/file.list.%{name}.libs
+rm -rf $RPM_BUILD_DIR/file.list.%{name}.files
+rm -rf $RPM_BUILD_DIR/file.list.%{name}.files.tmp
+rm -rf $RPM_BUILD_DIR/file.list.%{name}.dirs
+
+%files 
+%defattr(-,root,root,0755)
+@rpmfilelist@
