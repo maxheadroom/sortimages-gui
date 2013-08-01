@@ -9,7 +9,7 @@
     <property name="build" value="BUILD" />
     <property name="doku" value="JAVADOC" />
     <property name="package" value="PACKAGES" />
-    <property name="version" value="1.2.1" />
+    <property name="version" value="1.3.0" />
     <property name="testdir" value="${basedir}/test" />
     <property name="installdir" value="/usr/local/SortImagesGUI" />
     <property name="stylesheet" value="/home/m0554/src/docbook-xsl-1.64.0/html/docbook.xsl"/>
@@ -43,6 +43,7 @@
         <!-- <javac  srcdir="${src}" destdir="${build}"/> -->
     	<javac srcdir="${src}"
          destdir="${build}"
+		
          debug="on">
     		<classpath>
     			      <pathelement path="${classpath}"/>
@@ -86,7 +87,7 @@
     </target>
 
 	<target name="test" depends="jar">
-		<java jar="${package}/SortImagesGUI-${DSTAMP}.jar" fork="true">
+		<java jar="${package}/SortImagesGUI-${version}.jar" fork="true">
 			<jvmarg value="-DCONFIGFILE=${basedir}/sortimages.properties"/>
 			<arg value="${testdir}"/>
 		</java>
@@ -98,9 +99,9 @@
 		<delete dir="${doku}"/>
 	</target>
 
-	<target name="install" depends="jar, javadoc">
+	<target name="install" depends="jar">
 		<mkdir dir="${installdir}"/>
-		<copy file="${package}/SortImagesGUI-${DSTAMP}.jar" toFile="${installdir}/SortImagesGUI.jar"/>
+		<copy file="${package}/SortImagesGUI-${version}.jar" toFile="${installdir}/SortImagesGUI.jar"/>
 		<copy file="start.sh.template" toFile="${installdir}/start.sh">
 			<filterset>
 				<filter token="installdir" value="${installdir}"/>
@@ -158,7 +159,7 @@
     <fileset dir="${basedir}">
     	<include name="SortImagesGUI-${version}.src.tgz"/>
     	<include name="SortImagesGUI-${version}.src.zip"/>
-    	<include name="${package}/SortImagesGUI-${DSTAMP}.jar"/>
+    	<include name="${package}/SortImagesGUI-${version}.jar.jar"/>
     </fileset>
   </ftp>
 	</target>

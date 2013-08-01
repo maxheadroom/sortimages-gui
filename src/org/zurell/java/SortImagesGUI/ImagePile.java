@@ -225,6 +225,7 @@ public class ImagePile {
 	 * @param width The width to set.
 	 */
 	public void setWidth(String width) {
+		if (ImageSorter.DEBUG) System.err.println("Width: " + width);
 		imageProperties.setProperty("width", width);
 	}
 

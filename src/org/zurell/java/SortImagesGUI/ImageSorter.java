@@ -29,7 +29,6 @@ import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.sql.SQLWarning;
 import java.sql.Statement;
-import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.Date;
@@ -41,12 +40,14 @@ import java.util.Set;
 
 import javax.swing.SwingUtilities;
 
-import com.drew.imaging.jpeg.JpegMetadataReader;
-import com.drew.imaging.jpeg.JpegProcessingException;
+import com.drew.imaging.ImageMetadataReader;
+import com.drew.imaging.ImageProcessingException;
 import com.drew.metadata.Directory;
 import com.drew.metadata.Metadata;
 import com.drew.metadata.MetadataException;
-import com.drew.metadata.exif.ExifDirectory;
+import com.drew.metadata.exif.ExifIFD0Directory;
+import com.drew.metadata.exif.ExifSubIFDDirectory;
+import com.drew.metadata.jpeg.JpegDirectory;
 
 public class ImageSorter extends Thread {
 
@@ -59,6 +60,7 @@ public class ImageSorter extends Thread {
 	private Connection conn;
 	private Properties properties;
 	private boolean UseDB = false;
+	public static boolean DEBUG = true;
 
 	public ImageSorter(GUI gui, Properties props, HashMap files) {
 		parent = gui;
@@ -230,7 +232,7 @@ public class ImageSorter extends Thread {
 		/* Check if the parent directories are there */
 
 		File tmpPath = file.getNewFilename().getParentFile();
-		LinkedList dirList = new LinkedList();
+		LinkedList<File> dirList = new LinkedList<File>();
 		while (!tmpPath.exists()) {
 			dirList.add(tmpPath);
 			tmpPath = tmpPath.getParentFile();
@@ -292,7 +294,7 @@ public class ImageSorter extends Thread {
 				+ "/"
 				+ properties.getProperty("DBNAME");
 		try {
-			Class c = Class.forName("com.mysql.jdbc.Driver");
+			/* Class c = Class.forName("com.mysql.jdbc.Driver"); */
 			conn =
 				DriverManager.getConnection(
 					dbURL,
@@ -304,12 +306,6 @@ public class ImageSorter extends Thread {
 				warn = warn.getNextWarning();
 			}
 
-		} catch (ClassNotFoundException e) {
-
-			System.err.println("Database driver class not found.");
-			System.err.println(e.toString());
-			
-			System.exit(1);
 		} catch (SQLException e) {
 			System.err.println("Database error: " + e.toString());
 			System.exit(1);
@@ -326,7 +322,6 @@ public class ImageSorter extends Thread {
 				+ properties.getProperty("DBTABLE")
 				+ " (md5,cameramodel, cameramaker, capturedate, width, height, flash, aperture_time, exposure_time, focal_length, location, original_name) ";
 
-		StringBuffer mySQLDate = new StringBuffer();
 		SimpleDateFormat formatter = new SimpleDateFormat();
 		formatter.applyPattern("yyyy-MM-dd HH:mm:ss");
 
@@ -363,7 +358,7 @@ public class ImageSorter extends Thread {
 				
 			stmt = conn.createStatement();
 			SQL = adaptString(SQL);
-			
+			if (DEBUG) System.err.println("SQL: " + SQL);
 			stmt.execute(SQL);
 			SQLWarning warn = stmt.getWarnings();
 			while (warn != null) {
@@ -377,8 +372,8 @@ public class ImageSorter extends Thread {
 
 		} catch (SQLException e) {
 			parent.message(
-				"[MySQLDBConnector] SQL-Error during insert: " + e.toString());
-
+				"[MySQLDBConnector] SQL-Error during insert of: " + image.getFileName().getName() + "\n" + e.toString());
+			parent.message("SQL String: " + SQL + "\n\n\n");
 			return false;
 		}
 	}
@@ -541,92 +536,101 @@ public class ImageSorter extends Thread {
 
 		ImagePile exifMetaData;
 		File myFile = filename;
+		Directory subifd;
+		Directory ifd0;
+		Directory jpeg;
+		
+		
 		exifMetaData = new ImagePile(myFile);
 
 		Calendar cal = Calendar.getInstance();
 
 		Date myDate = new Date();
-		DateFormat df = DateFormat.getDateInstance();
-
 		Metadata metadata = new Metadata();
 
 		try {
-			metadata = JpegMetadataReader.readMetadata(myFile);
-		} catch (JpegProcessingException e) {
-			parent.message(myFile.getName() + ": error in reading JPEG Metadata.\n\tSkipping this image");
-			return null;
+			/* Metadata metadata = ImageMetadataReader.readMetadata(myFile); */
+			metadata = ImageMetadataReader.readMetadata(myFile);
+		
+
+		
+		/* Populate the two different EXIF directories */
+		
+		subifd = metadata.getDirectory(ExifSubIFDDirectory.class);
+		ifd0 = metadata.getDirectory(ExifIFD0Directory.class);
+		jpeg = metadata.getDirectory(JpegDirectory.class);
+		
+		if (ifd0.containsTag(ExifIFD0Directory.TAG_MAKE)) {
+			exifMetaData.setCameraMaker(ifd0.getString(ExifIFD0Directory.TAG_MAKE));
+		} else if (ifd0.containsTag(ExifIFD0Directory.TAG_ARTIST)) {
+			exifMetaData.setCameraMaker(ifd0.getString(ExifIFD0Directory.TAG_ARTIST));
 		}
 
-		Directory exifDirectory = metadata.getDirectory(ExifDirectory.class);
-
-		if (exifDirectory.containsTag(ExifDirectory.TAG_MAKE)) {
-			exifMetaData.setCameraMaker(
-				exifDirectory.getString(ExifDirectory.TAG_MAKE));
+		if (ifd0.containsTag(ExifIFD0Directory.TAG_MODEL)) {
+			exifMetaData.setCameraModel(ifd0.getString(ExifIFD0Directory.TAG_MODEL));
 		}
 
-		if (exifDirectory.containsTag(ExifDirectory.TAG_MODEL)) {
-			exifMetaData.setCameraModel(
-				exifDirectory.getString(ExifDirectory.TAG_MODEL));
-		}
-
-		if (!exifDirectory.containsTag(ExifDirectory.TAG_APERTURE)) {
-			if (exifDirectory.containsTag(ExifDirectory.TAG_MAX_APERTURE)) {
+		if (!subifd.containsTag(ExifSubIFDDirectory.TAG_APERTURE)) {
+			if (subifd.containsTag(ExifSubIFDDirectory.TAG_MAX_APERTURE)) {
 				exifMetaData.setApertureTime(
-					exifDirectory.getString(ExifDirectory.TAG_MAX_APERTURE));
+					subifd.getString(ExifSubIFDDirectory.TAG_MAX_APERTURE));
 			}
 		} else {
 			exifMetaData.setApertureTime(
-				exifDirectory.getString(ExifDirectory.TAG_APERTURE));
+				subifd.getString(ExifSubIFDDirectory.TAG_APERTURE));
 		}
 
-		if (exifDirectory.containsTag(ExifDirectory.TAG_FLASH)) {
+		if (subifd.containsTag(ExifSubIFDDirectory.TAG_FLASH)) {
 			exifMetaData.setFlashUsed(
-				exifDirectory.getString(ExifDirectory.TAG_FLASH));
+				subifd.getString(ExifSubIFDDirectory.TAG_FLASH));
 		}
 
-		if (exifDirectory.containsTag(ExifDirectory.TAG_FOCAL_LENGTH)) {
+		if (subifd.containsTag(ExifSubIFDDirectory.TAG_FOCAL_LENGTH)) {
 			exifMetaData.setFocalLength(
-				exifDirectory.getString(ExifDirectory.TAG_FOCAL_LENGTH));
+				subifd.getString(ExifSubIFDDirectory.TAG_FOCAL_LENGTH));
 		}
 
-		if (exifDirectory.containsTag(ExifDirectory.TAG_EXIF_IMAGE_WIDTH)) {
-			exifMetaData.setWidth(
-				exifDirectory.getString(ExifDirectory.TAG_EXIF_IMAGE_WIDTH));
+		if (subifd.containsTag(ExifSubIFDDirectory.TAG_EXIF_IMAGE_WIDTH)) {
+			exifMetaData.setWidth(subifd.getString(ExifSubIFDDirectory.TAG_EXIF_IMAGE_WIDTH));
+		} else if (jpeg.containsTag(JpegDirectory.TAG_JPEG_IMAGE_WIDTH)) {
+			exifMetaData.setWidth(jpeg.getString(JpegDirectory.TAG_JPEG_IMAGE_WIDTH));			
 		}
 
-		if (exifDirectory.containsTag(ExifDirectory.TAG_EXIF_IMAGE_HEIGHT)) {
+		if (subifd.containsTag(ExifSubIFDDirectory.TAG_EXIF_IMAGE_HEIGHT)) {
 			exifMetaData.setHeight(
-				exifDirectory.getString(ExifDirectory.TAG_EXIF_IMAGE_HEIGHT));
+				subifd.getString(ExifSubIFDDirectory.TAG_EXIF_IMAGE_HEIGHT));
+		} else if (jpeg.containsTag(JpegDirectory.TAG_JPEG_IMAGE_HEIGHT)) {
+			exifMetaData.setHeight(jpeg.getString(JpegDirectory.TAG_JPEG_IMAGE_HEIGHT));			
 		}
 
-		if (!exifDirectory.containsTag(ExifDirectory.TAG_SHUTTER_SPEED)) {
-			if (exifDirectory.containsTag(ExifDirectory.TAG_EXPOSURE_TIME)) {
+		if (!subifd.containsTag(ExifSubIFDDirectory.TAG_SHUTTER_SPEED)) {
+			if (subifd.containsTag(ExifSubIFDDirectory.TAG_EXPOSURE_TIME)) {
 				exifMetaData.setExposureTime(
-					exifDirectory.getString(ExifDirectory.TAG_EXPOSURE_TIME));
+					subifd.getString(ExifSubIFDDirectory.TAG_EXPOSURE_TIME));
 			}
 		} else {
 			exifMetaData.setExposureTime(
-				exifDirectory.getString(ExifDirectory.TAG_SHUTTER_SPEED));
+				subifd.getString(ExifSubIFDDirectory.TAG_SHUTTER_SPEED));
 		}
 
 		
-		if (exifDirectory.containsTag(ExifDirectory.TAG_DATETIME_DIGITIZED)) {
-			try {
-				myDate =	exifDirectory.getDate(ExifDirectory.TAG_DATETIME_DIGITIZED);
-			} catch (MetadataException e1) {
-				// TODO Auto-generated catch block
-				parent.message(e1.toString());
-			}
-		} else if (exifDirectory.containsTag(ExifDirectory.TAG_DATETIME_ORIGINAL) ){
-			try {
-				myDate =	exifDirectory.getDate(ExifDirectory.TAG_DATETIME_ORIGINAL);
-			} catch (MetadataException e1) {
-				// TODO Auto-generated catch block
-				parent.message(e1.toString());
-			}
+		if (subifd.containsTag(ExifSubIFDDirectory.TAG_DATETIME_DIGITIZED)) {
+			myDate =	subifd.getDate(ExifSubIFDDirectory.TAG_DATETIME_DIGITIZED);
+		} else if (subifd.containsTag(ExifSubIFDDirectory.TAG_DATETIME_ORIGINAL) ){
+			myDate =	subifd.getDate(ExifSubIFDDirectory.TAG_DATETIME_ORIGINAL);
 		} else {
 			myDate = new Date();
-	}
+		}
+		
+		} catch (ImageProcessingException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (MetadataException e) {
+			e.printStackTrace();
+		}
 
 	exifMetaData.setImageDate(myDate);
 
