@@ -60,7 +60,7 @@ public class ImageSorter extends Thread {
 	private Connection conn;
 	private Properties properties;
 	private boolean UseDB = false;
-	public static boolean DEBUG = true;
+	public static boolean DEBUG = false;
 
 	public ImageSorter(GUI gui, Properties props, HashMap files) {
 		parent = gui;
@@ -371,6 +371,7 @@ public class ImageSorter extends Thread {
 			return true;
 
 		} catch (SQLException e) {
+			System.err.println(ImageTester.checkfile(new File(image.getNewFilename().getAbsolutePath())));
 			parent.message(
 				"[MySQLDBConnector] SQL-Error during insert of: " + image.getFileName().getName() + "\n" + e.toString());
 			parent.message("SQL String: " + SQL + "\n\n\n");
@@ -536,9 +537,9 @@ public class ImageSorter extends Thread {
 
 		ImagePile exifMetaData;
 		File myFile = filename;
-		Directory subifd;
-		Directory ifd0;
-		Directory jpeg;
+		Directory subifd = new ExifSubIFDDirectory();
+		Directory ifd0 = new ExifIFD0Directory();
+		Directory jpeg = new JpegDirectory();
 		
 		
 		exifMetaData = new ImagePile(myFile);
@@ -554,22 +555,35 @@ public class ImageSorter extends Thread {
 		
 
 		
-		/* Populate the two different EXIF directories */
+		/* Populate the two different EXIF/JPEG directories */
+		if (metadata.containsDirectory(ExifSubIFDDirectory.class)) {
+			subifd = metadata.getDirectory(ExifSubIFDDirectory.class);
+		}
 		
-		subifd = metadata.getDirectory(ExifSubIFDDirectory.class);
-		ifd0 = metadata.getDirectory(ExifIFD0Directory.class);
-		jpeg = metadata.getDirectory(JpegDirectory.class);
+		if (metadata.containsDirectory(ExifIFD0Directory.class)) {
+			ifd0 = metadata.getDirectory(ExifIFD0Directory.class);
+		}
+		if (metadata.containsDirectory(JpegDirectory.class)) {
+			jpeg = metadata.getDirectory(JpegDirectory.class);
+		}
 		
+		// read and set camera maker
 		if (ifd0.containsTag(ExifIFD0Directory.TAG_MAKE)) {
 			exifMetaData.setCameraMaker(ifd0.getString(ExifIFD0Directory.TAG_MAKE));
 		} else if (ifd0.containsTag(ExifIFD0Directory.TAG_ARTIST)) {
 			exifMetaData.setCameraMaker(ifd0.getString(ExifIFD0Directory.TAG_ARTIST));
+		} else {
+			exifMetaData.setCameraMaker("Unknown");
 		}
 
+		// read and set camera model
 		if (ifd0.containsTag(ExifIFD0Directory.TAG_MODEL)) {
 			exifMetaData.setCameraModel(ifd0.getString(ExifIFD0Directory.TAG_MODEL));
+		} else {
+			exifMetaData.setCameraModel("Unknown");
 		}
 
+		// read and set aperture time
 		if (!subifd.containsTag(ExifSubIFDDirectory.TAG_APERTURE)) {
 			if (subifd.containsTag(ExifSubIFDDirectory.TAG_MAX_APERTURE)) {
 				exifMetaData.setApertureTime(
@@ -580,29 +594,39 @@ public class ImageSorter extends Thread {
 				subifd.getString(ExifSubIFDDirectory.TAG_APERTURE));
 		}
 
+		// read and set whether flash fired
 		if (subifd.containsTag(ExifSubIFDDirectory.TAG_FLASH)) {
 			exifMetaData.setFlashUsed(
 				subifd.getString(ExifSubIFDDirectory.TAG_FLASH));
 		}
 
+		// read and set focal length
 		if (subifd.containsTag(ExifSubIFDDirectory.TAG_FOCAL_LENGTH)) {
 			exifMetaData.setFocalLength(
 				subifd.getString(ExifSubIFDDirectory.TAG_FOCAL_LENGTH));
 		}
 
+		
+		// read and set Image Width
 		if (subifd.containsTag(ExifSubIFDDirectory.TAG_EXIF_IMAGE_WIDTH)) {
+			
 			exifMetaData.setWidth(subifd.getString(ExifSubIFDDirectory.TAG_EXIF_IMAGE_WIDTH));
-		} else if (jpeg.containsTag(JpegDirectory.TAG_JPEG_IMAGE_WIDTH)) {
-			exifMetaData.setWidth(jpeg.getString(JpegDirectory.TAG_JPEG_IMAGE_WIDTH));			
+			
+		} else  {
+			
+			exifMetaData.setWidth(jpeg.getString(JpegDirectory.TAG_JPEG_IMAGE_WIDTH));
+			
 		}
 
+		// read and set Image Height
 		if (subifd.containsTag(ExifSubIFDDirectory.TAG_EXIF_IMAGE_HEIGHT)) {
 			exifMetaData.setHeight(
 				subifd.getString(ExifSubIFDDirectory.TAG_EXIF_IMAGE_HEIGHT));
-		} else if (jpeg.containsTag(JpegDirectory.TAG_JPEG_IMAGE_HEIGHT)) {
+		} else {
 			exifMetaData.setHeight(jpeg.getString(JpegDirectory.TAG_JPEG_IMAGE_HEIGHT));			
 		}
 
+		// read and set Shutter Speed
 		if (!subifd.containsTag(ExifSubIFDDirectory.TAG_SHUTTER_SPEED)) {
 			if (subifd.containsTag(ExifSubIFDDirectory.TAG_EXPOSURE_TIME)) {
 				exifMetaData.setExposureTime(
@@ -614,6 +638,7 @@ public class ImageSorter extends Thread {
 		}
 
 		
+		// read and set date/time when picture was taken
 		if (subifd.containsTag(ExifSubIFDDirectory.TAG_DATETIME_DIGITIZED)) {
 			myDate =	subifd.getDate(ExifSubIFDDirectory.TAG_DATETIME_DIGITIZED);
 		} else if (subifd.containsTag(ExifSubIFDDirectory.TAG_DATETIME_ORIGINAL) ){
@@ -623,12 +648,17 @@ public class ImageSorter extends Thread {
 		}
 		
 		} catch (ImageProcessingException e) {
+			
+			System.err.println(ImageTester.checkfile(myFile));
 			// TODO Auto-generated catch block
+			parent.message("Error with file: " + myFile.getAbsolutePath());
 			e.printStackTrace();
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
+			parent.message("Error with file: " + myFile.getAbsolutePath());
 			e.printStackTrace();
-		} catch (MetadataException e) {
+		} catch (java.lang.NullPointerException e) {
+			parent.message("Error with file: " + myFile.getAbsolutePath());
 			e.printStackTrace();
 		}
 
