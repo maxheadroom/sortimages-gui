@@ -76,3 +76,11 @@ Now each images is examined for EXIF metadata and the MD5 sum is calculated. The
 If the image is already found in the database (same MD5 sum) the the image is not copied but skipped.
 
 If there is already a file with the same name in the target directory (already sorted but not in database or taken in the same second) then a underscore is prepended to the start of the filename. This is done repeatedly until the filename is unique in the directory.
+
+Building the MacOS X App Bundle
+===============================
+
+In order to build a MacOS X Application Bundle from the JAR file you need to execute the ANT task "make-bundle". This will package the app into the PACKAGES directory.
+Documentation about the App Bundler can be found here: https://java.net/projects/appbundler/pages/Home
+
+

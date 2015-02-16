@@ -3,7 +3,7 @@
 <!-- $Id: build.xml,v 1.15 2006/02/08 13:54:44 zero_data Exp $ -->
 <project basedir="." default="all" name="SortImagesGUI">
 
-
+	<!-- <import file="nbproject/build-impl.xml"/> -->
     <property name="src" value="src" />
 	<property name="lib" value="lib" />
     <property name="build" value="BUILD" />
@@ -21,7 +21,10 @@
     <property name="dbport" value="3306"/>    
     <property name="targetdir" value="${basedir}/target"/>
 	
-	
+	<!-- Define the MacOS X App builder task -->
+	<taskdef name="bundleapp"
+             classname="com.oracle.appbundler.AppBundlerTask"   
+             classpath="lib/appbundler-1.0.jar" />
 
 
     <target name="all" depends="install">
@@ -163,4 +166,26 @@
     </fileset>
   </ftp>
 	</target>
+	
+
+
+
+	<!-- create a MacOS X executable Application Bundle -->
+	<target name="make-bundle">
+	        <bundleapp outputdirectory="${package}"
+	            name="SortImages-GUI-${version}"
+	            displayname="SortImages-GUI-${version}"
+	            identifier="org.zurell.java.SortImagesGUI"
+	            mainclassname="org.zurell.java.SortImagesGUI.SortImagesGUI"
+				shortversion="${version}"
+				applicationCategory="public.app-category.developer-tools">
+	            <classpath file="${package}/SortImagesGUI-${version}.jar" />
+				       
+				   
+				        <option value="-Dapple.laf.useScreenMenuBar=true"/>
+				
+	        </bundleapp>
+	    </target>
+	
+	
 </project>
