@@ -30,19 +30,32 @@ public class SortImagesGUI {
 	static final String Version = "1.2.0";
 	private Properties sysprops = System.getProperties();
 	private String sep;
+	
+	// Main function. This is where the Java Interpreter will start the execution
 	public static void main(String[] args) {
+		@SuppressWarnings("unused")
 		SortImagesGUI myObject = new SortImagesGUI();
 		
 	}
 	
+	
+	// This is the main constructor
 	public SortImagesGUI() {
 		
+		// figure out what the local OS File Separator is
 		sep = sysprops.getProperty("file.separator");
 		
+		// check if Properties are available
 		checkProperties();
+		
+		// create the GUI
 		myGui = new GUI(properties);
 		myGui.setTitle("SortImage GUI");
+		
+		// Put the GUI into its own thread
 		Thread t = new Thread(myGui);
+		
+		// start the thread
 		t.start();
 		
 		

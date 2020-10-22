@@ -31,6 +31,7 @@ import java.sql.SQLWarning;
 import java.sql.Statement;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
+import java.util.Collection;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -108,6 +109,7 @@ public class ImageSorter extends Thread {
 		
 		parent.message("####### FINISHED #######");
 	}
+	@SuppressWarnings("resource")
 	private boolean dumpDB() {
 		// this method makes a complete dump of the database
 		// in an reimportable format
@@ -148,8 +150,9 @@ public class ImageSorter extends Thread {
 			
 			
 			File dumpFile = new File(properties.getProperty("PHOTODIR") + sep + "autodump.mysql"); 
+			
 			try {
-				new FileOutputStream(dumpFile).write(output.getBytes());
+				 new FileOutputStream(dumpFile).write(output.getBytes());
 				
 			} catch (FileNotFoundException e1) {
 				// TODO Auto-generated catch block
@@ -157,7 +160,7 @@ public class ImageSorter extends Thread {
 			} catch (IOException e1) {
 				// TODO Auto-generated catch block
 				e1.printStackTrace();
-			}
+			} 
 			
 			
 			return true;
@@ -537,7 +540,7 @@ public class ImageSorter extends Thread {
 
 		ImagePile exifMetaData;
 		File myFile = filename;
-		Directory subifd = new ExifSubIFDDirectory();
+		ExifSubIFDDirectory subifd = new ExifSubIFDDirectory();
 		Directory ifd0 = new ExifIFD0Directory();
 		Directory jpeg = new JpegDirectory();
 		
@@ -556,15 +559,15 @@ public class ImageSorter extends Thread {
 
 		
 		/* Populate the two different EXIF/JPEG directories */
-		if (metadata.containsDirectory(ExifSubIFDDirectory.class)) {
-			subifd = metadata.getDirectory(ExifSubIFDDirectory.class);
+		if (metadata.containsDirectoryOfType(ExifSubIFDDirectory.class)) {
+			subifd = (ExifSubIFDDirectory) metadata.getDirectoriesOfType(ExifSubIFDDirectory.class);
 		}
 		
-		if (metadata.containsDirectory(ExifIFD0Directory.class)) {
-			ifd0 = metadata.getDirectory(ExifIFD0Directory.class);
+		if (metadata.containsDirectoryOfType(ExifIFD0Directory.class)) {
+			ifd0 = (Directory) metadata.getDirectoriesOfType(ExifIFD0Directory.class);
 		}
-		if (metadata.containsDirectory(JpegDirectory.class)) {
-			jpeg = metadata.getDirectory(JpegDirectory.class);
+		if (metadata.containsDirectoryOfType(JpegDirectory.class)) {
+			jpeg = (Directory) metadata.getDirectoriesOfType(JpegDirectory.class);
 		}
 		
 		// read and set camera maker
@@ -614,7 +617,7 @@ public class ImageSorter extends Thread {
 			
 		} else  {
 			
-			exifMetaData.setWidth(jpeg.getString(JpegDirectory.TAG_JPEG_IMAGE_WIDTH));
+			exifMetaData.setWidth(jpeg.getString(JpegDirectory.TAG_IMAGE_WIDTH));
 			
 		}
 
@@ -623,7 +626,7 @@ public class ImageSorter extends Thread {
 			exifMetaData.setHeight(
 				subifd.getString(ExifSubIFDDirectory.TAG_EXIF_IMAGE_HEIGHT));
 		} else {
-			exifMetaData.setHeight(jpeg.getString(JpegDirectory.TAG_JPEG_IMAGE_HEIGHT));			
+			exifMetaData.setHeight(jpeg.getString(JpegDirectory.TAG_IMAGE_HEIGHT));			
 		}
 
 		// read and set Shutter Speed
